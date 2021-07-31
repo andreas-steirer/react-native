@@ -6,6 +6,7 @@
  */
 
 #include <../instrumentation/HermesMemoryDumper.h>
+#include <DefaultHermesGCConfigBuilder-inl.h>
 #include <HermesExecutorFactory.h>
 #include <android/log.h>
 #include <fbjni/fbjni.h>
@@ -31,22 +32,8 @@ static void hermesFatalHandler(const std::string &reason) {
 static std::once_flag flag;
 
 static ::hermes::vm::RuntimeConfig makeRuntimeConfig(jlong heapSizeMB) {
-  namespace vm = ::hermes::vm;
-  auto gcConfigBuilder =
-      vm::GCConfig::Builder()
-          .withName("RN")
-          // For the next two arguments: avoid GC before TTI by initializing the
-          // runtime to allocate directly in the old generation, but revert to
-          // normal operation when we reach the (first) TTI point.
-          .withAllocInYoung(false)
-          .withRevertToYGAtTTI(true);
-
-  if (heapSizeMB > 0) {
-    gcConfigBuilder.withMaxHeapSize(heapSizeMB << 20);
-  }
-
-  return vm::RuntimeConfig::Builder()
-      .withGCConfig(gcConfigBuilder.build())
+  return ::hermes::vm::RuntimeConfig::Builder()
+      .withGCConfig(defaultHermesGCConfigBuilder(heapSizeMB).build())
       .build();
 }
 
